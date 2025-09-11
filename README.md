@@ -29,7 +29,7 @@ accelerate/
 3. **Install Dependencies**
    ```bash
    cd web && bun install
-   cd ../api && npm install
+   cd ../api && bun install
    cd ../ml-service && pip install -r requirements.txt
    ```
 
@@ -39,7 +39,7 @@ accelerate/
    cd web && bun dev
 
    # Terminal 2 - API Server
-   cd api && npm run dev
+   cd api && bun run dev
 
    # Terminal 3 - ML Service
    cd ml-service && python main.py
@@ -78,7 +78,7 @@ cd web && bun run lint:fix
 
 The system follows a microservices architecture:
 1. **Web App**: User interface and authentication
-2. **API Server**: Business logic and GitHub integration  
+2. **API Server**: Business logic and GitHub integration
 3. **ML Service**: Acceleration detection algorithms
 4. **Databases**: Data persistence and time-series storage
 
