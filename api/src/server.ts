@@ -17,9 +17,13 @@ import { testConnection as testRedis, close as closeRedis } from './db/redis.js'
 
 // Import plugins
 import healthPlugin from './plugins/health.js';
+import authPlugin from './plugins/auth.js';
 import teamsPlugin from './plugins/teams.js';
 import metricsPlugin from './plugins/metrics.js';
 import dashboardPlugin from './plugins/dashboard.js';
+
+// Import middleware
+import { authenticateWithClerk } from './middleware/clerkAuth.js';
 
 config();
 
@@ -55,6 +59,13 @@ async function registerPlugins() {
   // WebSocket support
   await server.register(websocket);
 
+  // Clerk authentication
+  const { clerkPlugin } = await import('@clerk/fastify');
+  await server.register(clerkPlugin, {
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY!,
+    secretKey: process.env.CLERK_SECRET_KEY!,
+  });
+
   // Swagger documentation
   await server.register(swagger, {
     swagger: {
@@ -86,9 +97,17 @@ async function registerPlugins() {
 
   // API routes
   await server.register(healthPlugin);
-  await server.register(teamsPlugin, { prefix: '/api/v1' });
-  await server.register(metricsPlugin, { prefix: '/api/v1' });
-  await server.register(dashboardPlugin, { prefix: '/api/v1' });
+  
+  // Protected routes - add Clerk authentication middleware
+  await server.register(async function (fastify) {
+    // Add Clerk auth hook to all routes in this context
+    fastify.addHook('preHandler', authenticateWithClerk);
+    
+    // Register protected plugins
+    await fastify.register(teamsPlugin);
+    await fastify.register(metricsPlugin);
+    await fastify.register(dashboardPlugin);
+  }, { prefix: '/api/v1' });
 }
 
 // WebSocket connections for real-time updates

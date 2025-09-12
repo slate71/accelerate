@@ -17,16 +17,16 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "@fastify/cors": "^8.4.0",
-    "@fastify/helmet": "^11.1.1",
-    "@fastify/swagger": "^8.12.0",
-    "@fastify/swagger-ui": "^1.10.0",
-    "@fastify/websocket": "^8.3.1",
+    "@clerk/fastify": "^2.4.31",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/helmet": "^12.0.0",
+    "@fastify/swagger": "^9.0.0",
+    "@fastify/swagger-ui": "^5.0.0",
+    "@fastify/websocket": "^11.0.0",
     "@influxdata/influxdb-client": "^1.33.2",
     "@influxdata/influxdb-client-apis": "^1.35.0",
-    "bcryptjs": "^2.4.3",
     "dotenv": "^16.3.1",
-    "fastify": "^4.24.3",
+    "fastify": "^5.6.0",
     "ioredis": "^5.3.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3",
@@ -35,7 +35,6 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.8",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.5",
