@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS github_installations (
   clerk_user_id VARCHAR(255) REFERENCES users(clerk_user_id),
   github_user_id VARCHAR(255),
   github_username VARCHAR(255),
-  access_token TEXT, -- Encrypted via Clerk
+  access_token TEXT, -- Encrypted using AES-256-GCM
   installation_id BIGINT,
   scope VARCHAR(500), -- OAuth scopes granted
   token_type VARCHAR(50),

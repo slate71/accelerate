@@ -276,18 +276,18 @@ export default async function githubPlugin(fastify: FastifyInstance, opts: Fasti
 
   // Connect repository with transaction and ownership validation
   fastify.post(
-    '/github/repositories/:teamId/connect',
+    '/github/repositories/connect',
     {
       schema: {
-        params: z.object({
-          teamId: z.string().uuid(),
+        body: ConnectRepositorySchema.extend({
+          team_id: z.string().uuid(),
         }),
-        body: ConnectRepositorySchema,
       },
     },
     async (request, reply) => {
-      const { teamId } = request.params as { teamId: string };
-      const repoData = request.body as z.infer<typeof ConnectRepositorySchema>;
+      const { team_id: teamId, ...repoData } = request.body as z.infer<
+        typeof ConnectRepositorySchema
+      > & { team_id: string };
 
       // Verify user has access to team
       const userId = (request as any).auth?.userId;

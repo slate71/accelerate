@@ -42,11 +42,18 @@ export class GitHubAuthService {
       timestamp: Date.now(),
     };
 
-    // Store in Redis with expiry
-    const redisKey = `github:state:${stateToken}`;
-    await redis.setex(redisKey, STATE_TOKEN_EXPIRY, JSON.stringify(stateData));
-
-    return stateToken;
+    try {
+      // Store in Redis with expiry
+      const redisKey = `github:state:${stateToken}`;
+      await redis.setex(redisKey, STATE_TOKEN_EXPIRY, JSON.stringify(stateData));
+      return stateToken;
+    } catch (error: any) {
+      // Fallback: Encode state directly (less secure but functional)
+      console.error('Redis unavailable for state token storage:', error.message);
+      // Include timestamp for manual expiry checking
+      const fallbackState = Buffer.from(JSON.stringify(stateData)).toString('base64');
+      return fallbackState;
+    }
   }
 
   /**
@@ -57,25 +64,46 @@ export class GitHubAuthService {
     user_id: string;
     redirect_url: string;
   }> {
-    const redisKey = `github:state:${stateToken}`;
-    const stateDataStr = await redis.get(redisKey);
+    try {
+      // Try Redis first
+      const redisKey = `github:state:${stateToken}`;
+      const stateDataStr = await redis.get(redisKey);
 
-    if (!stateDataStr) {
+      if (stateDataStr) {
+        // Delete the token after use (one-time use)
+        await redis.del(redisKey);
+        const stateData = JSON.parse(stateDataStr);
+
+        // Additional timestamp validation
+        const age = Date.now() - stateData.timestamp;
+        if (age > STATE_TOKEN_EXPIRY * 1000) {
+          throw new GitHubAuthError('State token has expired');
+        }
+
+        return stateData;
+      }
+    } catch (redisError: any) {
+      console.error('Redis error during state validation:', redisError.message);
+    }
+
+    // Fallback: Try to decode base64 state
+    try {
+      const stateData = JSON.parse(Buffer.from(stateToken, 'base64').toString());
+
+      // Validate timestamp
+      if (!stateData.timestamp) {
+        throw new GitHubAuthError('Invalid state token format');
+      }
+
+      const age = Date.now() - stateData.timestamp;
+      if (age > STATE_TOKEN_EXPIRY * 1000) {
+        throw new GitHubAuthError('State token has expired');
+      }
+
+      return stateData;
+    } catch (error) {
       throw new GitHubAuthError('Invalid or expired state token');
     }
-
-    // Delete the token after use (one-time use)
-    await redis.del(redisKey);
-
-    const stateData = JSON.parse(stateDataStr);
-
-    // Additional timestamp validation (belt and suspenders)
-    const age = Date.now() - stateData.timestamp;
-    if (age > STATE_TOKEN_EXPIRY * 1000) {
-      throw new GitHubAuthError('State token has expired');
-    }
-
-    return stateData;
   }
 
   /**
