@@ -83,5 +83,3 @@ The system follows a microservices architecture:
 4. **Databases**: Data persistence and time-series storage
 
 ---
-
-Built for TOG-247: Phase 1 Acceleration MVP

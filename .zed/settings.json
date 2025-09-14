@@ -1,0 +1,60 @@
+{
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.DS_Store",
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/.next",
+    "**/bun.lock",
+    "**/bun.lockb"
+  ],
+  "languages": {
+    "JSON": {
+      "tab_size": 2,
+      "formatter": "prettier"
+    },
+    "TypeScript": {
+      "tab_size": 2,
+      "formatter": "prettier"
+    },
+    "JavaScript": {
+      "tab_size": 2,
+      "formatter": "prettier"
+    }
+  },
+  "format_on_save": "on",
+  "lsp": {
+    "typescript-language-server": {
+      "initialization_options": {
+        "preferences": {
+          "includeInlayParameterNameHints": "all",
+          "includeInlayParameterNameHintsWhenArgumentMatchesName": false,
+          "includeInlayFunctionParameterTypeHints": true,
+          "includeInlayVariableTypeHints": false,
+          "includeInlayPropertyDeclarationTypeHints": false,
+          "includeInlayFunctionLikeReturnTypeHints": true
+        }
+      }
+    },
+    "json-language-server": {
+      "initialization_options": {
+        "provideFormatter": true,
+        "json": {
+          "validate": {
+            "enable": true
+          },
+          "schemas": [
+            {
+              "fileMatch": ["*.json", "!bun.lock"],
+              "schema": true
+            }
+          ]
+        }
+      }
+    }
+  },
+  "file_types": {
+    "Plain Text": ["bun.lock", "bun.lockb"]
+  }
+}

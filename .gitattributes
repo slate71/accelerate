@@ -1,0 +1,24 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Lock files - treat as binary to prevent modifications
+bun.lock binary
+bun.lockb binary
+package-lock.json binary
+yarn.lock binary
+pnpm-lock.yaml binary
+
+# Ensure consistent line endings
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.sql text eol=lf
+*.sh text eol=lf
+
+# Exclude from language statistics
+*.lock linguist-generated=true
+bun.lock linguist-generated=true
+bun.lockb linguist-generated=true

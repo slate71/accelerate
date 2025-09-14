@@ -8,19 +8,19 @@ import { config } from 'dotenv';
 
 // Import database connections
 import { testConnection as testPostgres, closePool } from './db/postgres.js';
-import { 
-  testConnection as testInflux, 
-  initializeBucket, 
-  close as closeInflux 
+import {
+  testConnection as testInflux,
+  initializeBucket,
+  close as closeInflux,
 } from './db/influx.js';
 import { testConnection as testRedis, close as closeRedis } from './db/redis.js';
 
 // Import plugins
 import healthPlugin from './plugins/health.js';
-import authPlugin from './plugins/auth.js';
 import teamsPlugin from './plugins/teams.js';
 import metricsPlugin from './plugins/metrics.js';
 import dashboardPlugin from './plugins/dashboard.js';
+import githubPlugin from './plugins/github.js';
 
 // Import middleware
 import { authenticateWithClerk } from './middleware/clerkAuth.js';
@@ -83,6 +83,7 @@ async function registerPlugins() {
         { name: 'teams', description: 'Team management' },
         { name: 'metrics', description: 'Velocity and acceleration metrics' },
         { name: 'dashboard', description: 'Dashboard data' },
+        { name: 'github', description: 'GitHub integration' },
       ],
     },
   });
@@ -97,17 +98,21 @@ async function registerPlugins() {
 
   // API routes
   await server.register(healthPlugin);
-  
+
   // Protected routes - add Clerk authentication middleware
-  await server.register(async function (fastify) {
-    // Add Clerk auth hook to all routes in this context
-    fastify.addHook('preHandler', authenticateWithClerk);
-    
-    // Register protected plugins
-    await fastify.register(teamsPlugin);
-    await fastify.register(metricsPlugin);
-    await fastify.register(dashboardPlugin);
-  }, { prefix: '/api/v1' });
+  await server.register(
+    async function (fastify) {
+      // Add Clerk auth hook to all routes in this context
+      fastify.addHook('preHandler', authenticateWithClerk);
+
+      // Register protected plugins
+      await fastify.register(teamsPlugin);
+      await fastify.register(metricsPlugin);
+      await fastify.register(dashboardPlugin);
+      await fastify.register(githubPlugin);
+    },
+    { prefix: '/api/v1' }
+  );
 }
 
 // WebSocket connections for real-time updates
@@ -116,15 +121,15 @@ server.register(async function (fastify) {
     const clientId = Math.random().toString(36).substring(7);
     fastify.log.info(`WebSocket client ${clientId} connected`);
 
-    connection.on('message', (message) => {
+    connection.on('message', (message: any) => {
       try {
         const data = JSON.parse(message.toString());
-        
+
         if (data.type === 'subscribe' && data.teamId) {
           // Store team subscription (in production, use Redis)
           fastify.log.info(`Client ${clientId} subscribed to team ${data.teamId}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         fastify.log.error('WebSocket message error:', error);
       }
     });
@@ -155,7 +160,7 @@ server.get('/', async (_request, _reply) => {
 // Error handler
 server.setErrorHandler((error, request, reply) => {
   server.log.error(error);
-  
+
   const statusCode = error.statusCode || 500;
   reply.status(statusCode).send({
     error: error.name || 'Internal Server Error',
@@ -205,7 +210,7 @@ async function startServer() {
     const host = process.env.API_HOST || 'localhost';
 
     await server.listen({ port, host });
-    
+
     server.log.info(`✅ API Server running on http://${host}:${port}`);
     server.log.info(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
     server.log.info(`📍 API Version: v1`);
@@ -224,7 +229,7 @@ async function gracefulShutdown() {
     await server.close();
     await Promise.all([closePool(), closeInflux(), closeRedis()]);
     server.log.info('✅ All connections closed. Exiting...');
-  } catch (error) {
+  } catch (error: any) {
     server.log.error('Error during shutdown:', error);
   } finally {
     process.exit(0);
