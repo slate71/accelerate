@@ -2,6 +2,8 @@ import { FastifyRequest } from 'fastify';
 import { pool } from '../../db/postgres.js';
 import { GitHubInstallation, GitHubAuthError, GitHubAuthConfig } from '../../types/github.js';
 import * as crypto from 'crypto';
+import { encrypt, decrypt, generateSecureToken } from '../../utils/crypto.js';
+import { redis } from '../../db/redis.js';
 
 // OAuth App Auth implementation
 interface OAuthTokenResponse {
@@ -9,6 +11,9 @@ interface OAuthTokenResponse {
   tokenType?: string;
   scopes?: string[];
 }
+
+// State token expiry time (10 minutes)
+const STATE_TOKEN_EXPIRY = 10 * 60; // 10 minutes in seconds
 
 export class GitHubAuthService {
   private clientId: string;
@@ -23,6 +28,54 @@ export class GitHubAuthService {
     if (!this.clientId || !this.clientSecret) {
       throw new Error('GitHub OAuth credentials not configured');
     }
+  }
+
+  /**
+   * Generate and store a secure state token with expiry
+   */
+  async generateStateToken(teamId: string, userId: string, redirectUrl?: string): Promise<string> {
+    const stateToken = generateSecureToken(32);
+    const stateData = {
+      team_id: teamId,
+      user_id: userId,
+      redirect_url: redirectUrl || '/settings/integrations',
+      timestamp: Date.now(),
+    };
+
+    // Store in Redis with expiry
+    const redisKey = `github:state:${stateToken}`;
+    await redis.setex(redisKey, STATE_TOKEN_EXPIRY, JSON.stringify(stateData));
+
+    return stateToken;
+  }
+
+  /**
+   * Validate and retrieve state token data
+   */
+  async validateStateToken(stateToken: string): Promise<{
+    team_id: string;
+    user_id: string;
+    redirect_url: string;
+  }> {
+    const redisKey = `github:state:${stateToken}`;
+    const stateDataStr = await redis.get(redisKey);
+
+    if (!stateDataStr) {
+      throw new GitHubAuthError('Invalid or expired state token');
+    }
+
+    // Delete the token after use (one-time use)
+    await redis.del(redisKey);
+
+    const stateData = JSON.parse(stateDataStr);
+
+    // Additional timestamp validation (belt and suspenders)
+    const age = Date.now() - stateData.timestamp;
+    if (age > STATE_TOKEN_EXPIRY * 1000) {
+      throw new GitHubAuthError('State token has expired');
+    }
+
+    return stateData;
   }
 
   /**
@@ -116,12 +169,15 @@ export class GitHubAuthService {
     `;
 
     try {
+      // Encrypt the access token before storing
+      const encryptedToken = encrypt(accessToken);
+
       const result = await pool.query(query, [
         teamId,
         clerkUserId,
         githubUserId,
         githubUsername,
-        accessToken, // In production, encrypt this
+        encryptedToken,
         scope,
         tokenType,
       ]);
@@ -161,8 +217,12 @@ export class GitHubAuthService {
       throw new GitHubAuthError('No GitHub installation found for team');
     }
 
-    // In production, decrypt the token here
-    return installation.access_token;
+    // Decrypt the token before returning
+    try {
+      return decrypt(installation.access_token);
+    } catch (error) {
+      throw new GitHubAuthError('Failed to decrypt access token');
+    }
   }
 
   /**
@@ -176,15 +236,20 @@ export class GitHubAuthService {
     }
 
     try {
+      // Decrypt token for revocation
+      const accessToken = decrypt(installation.access_token);
+
       // Revoke token with GitHub
       const response = await fetch(`https://api.github.com/applications/${this.clientId}/token`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64')}`,
+          Authorization: `Basic ${Buffer.from(`${this.clientId}:${this.clientSecret}`).toString(
+            'base64'
+          )}`,
           Accept: 'application/vnd.github.v3+json',
         },
         body: JSON.stringify({
-          access_token: installation.access_token,
+          access_token: accessToken,
         }),
       });
 
