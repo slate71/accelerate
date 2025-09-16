@@ -17,17 +17,21 @@ This service implements the core algorithm that powers the predictive system for
 ## API Endpoints
 
 ### Health Check
+
 ```bash
 GET /health
 ```
+
 Returns service health status.
 
 ### Calculate Acceleration
+
 ```bash
 POST /calculate-acceleration
 ```
 
 **Request Body:**
+
 ```json
 {
   "timestamps": ["2024-08-17T00:00:00", "2024-08-18T00:00:00", ...],
@@ -37,6 +41,7 @@ POST /calculate-acceleration
 ```
 
 **Response:**
+
 ```json
 {
   "current_velocity": 10.684,
@@ -51,13 +56,17 @@ POST /calculate-acceleration
 ## Algorithm Details
 
 ### Exponential Smoothing
+
 Applies exponential smoothing to reduce noise in raw throughput data:
+
 ```
 smoothed[i] = α × value[i] + (1 - α) × smoothed[i-1]
 ```
+
 - Default α = 0.3 (higher values = more responsive to changes)
 
 ### Acceleration Calculation
+
 1. **Velocity**: First derivative of smoothed throughput
 2. **Acceleration**: Second derivative (rate of change of velocity)
 3. **Trend Classification**: Based on recent acceleration mean:
@@ -66,7 +75,9 @@ smoothed[i] = α × value[i] + (1 - α) × smoothed[i-1]
    - `stable`: -0.1 ≤ acceleration ≤ 0.1
 
 ### Confidence Scoring
+
 Confidence is calculated using signal-to-noise ratio:
+
 ```
 confidence = min(1.0, |mean_acceleration| / (std_acceleration + ε))
 ```
@@ -74,6 +85,7 @@ confidence = min(1.0, |mean_acceleration| / (std_acceleration + ε))
 ## Usage Examples
 
 ### Testing with curl
+
 ```bash
 # Improving trend
 curl -X POST http://localhost:8000/calculate-acceleration \
@@ -86,16 +98,17 @@ curl -X POST http://localhost:8000/calculate-acceleration \
 ```
 
 ### Integration with API
+
 ```javascript
 // Example: Fetch acceleration for a team
-const response = await fetch('http://ml-service:8000/calculate-acceleration', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+const response = await fetch("http://ml-service:8000/calculate-acceleration", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     timestamps: prMetrics.timestamps,
     metrics: prMetrics.throughput,
-    smoothing_alpha: 0.3
-  })
+    smoothing_alpha: 0.3,
+  }),
 });
 
 const { trend, confidence, current_acceleration } = await response.json();
@@ -104,12 +117,15 @@ const { trend, confidence, current_acceleration } = await response.json();
 ## Running the Service
 
 ### With Docker Compose
+
 ```bash
 docker-compose up ml-service
 ```
+
 Service will be available at `http://localhost:8000`
 
 ### Local Development
+
 ```bash
 cd ml-service
 pip install -r requirements.txt
@@ -128,6 +144,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ## Configuration
 
 Environment variables:
+
 - `POSTGRES_URL`: Database connection string (optional)
 - `INFLUXDB_URL`: InfluxDB connection for time-series data (optional)
 - `INFLUXDB_TOKEN`: InfluxDB authentication token (optional)
@@ -143,28 +160,29 @@ Environment variables:
 ### Common Issues
 
 **Service won't start:**
+
 - Check that port 8000 is available
 - Verify all dependencies are installed
 - Check Docker logs: `docker logs accelerate-ml-service-1`
 
 **Calculation errors:**
+
 - Ensure minimum 7 data points for reliable acceleration detection
 - Verify timestamps are in ISO format
 - Check that metrics are positive numbers
 
 **Poor confidence scores:**
+
 - Increase data collection period (more data points)
 - Adjust smoothing_alpha (lower = more smoothing)
 - Check for data quality issues (outliers, missing values)
 
 ## Development
 
-### Running Tests
-```bash
-python test_ml_service.py
-```
+### TODO: Add tests
 
 ### Adding New Algorithms
+
 1. Extend `AccelerationDetector` class in `app/detector.py`
 2. Add new endpoints in `app/main.py`
 3. Update data models in `app/models.py`
@@ -172,6 +190,7 @@ python test_ml_service.py
 ## Architecture
 
 The ML service is designed to be:
+
 - **Stateless**: No persistent data storage required
 - **Scalable**: Can be horizontally scaled for high throughput
 - **Modular**: Easy to extend with additional ML algorithms
