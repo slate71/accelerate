@@ -1,0 +1,71 @@
+{
+  "file_scan_exclusions": [
+    "**/routeTree.gen.ts"
+  ],
+  "project_search": {
+    "exclude_patterns": [
+      "**/routeTree.gen.ts"
+    ]
+  },
+  "languages": {
+    "JavaScript": {
+      "formatter": {
+        "external": {
+          "command": "biome",
+          "arguments": ["format", "--stdin-file-path", "{buffer_path}"]
+        }
+      }
+    },
+    "JSX": {
+      "formatter": {
+        "external": {
+          "command": "biome",
+          "arguments": ["format", "--stdin-file-path", "{buffer_path}"]
+        }
+      }
+    },
+    "TypeScript": {
+      "formatter": {
+        "external": {
+          "command": "biome",
+          "arguments": ["format", "--stdin-file-path", "{buffer_path}"]
+        }
+      }
+    },
+    "TSX": {
+      "formatter": {
+        "external": {
+          "command": "biome",
+          "arguments": ["format", "--stdin-file-path", "{buffer_path}"]
+        }
+      }
+    },
+    "JSON": {
+      "formatter": {
+        "external": {
+          "command": "biome",
+          "arguments": ["format", "--stdin-file-path", "{buffer_path}"]
+        }
+      }
+    },
+    "CSS": {
+      "formatter": {
+        "external": {
+          "command": "biome",
+          "arguments": ["format", "--stdin-file-path", "{buffer_path}"]
+        }
+      }
+    }
+  },
+  "format_on_save": "on",
+  "lsp": {
+    "biome": {
+      "settings": {
+        "requireConfiguration": true,
+        "organizeImports": {
+          "enabled": true
+        }
+      }
+    }
+  }
+}
