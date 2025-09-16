@@ -14,7 +14,7 @@ const bucket = process.env.INFLUXDB_BUCKET || 'metrics';
 const influxDB = new InfluxDB({ url, token });
 
 // Create write and query APIs
-const writeApi = influxDB.getWriteApi(org, bucket, "ns");
+const writeApi = influxDB.getWriteApi(org, bucket, 'ns');
 const queryApi = influxDB.getQueryApi(org);
 
 // Bucket and org APIs for management
@@ -34,11 +34,16 @@ export const MEASUREMENTS = {
 } as const;
 
 // Helper function to write velocity metrics
-async function writeVelocityMetric(teamId: string, repoId: string | null, value: number, tags: Record<string, string> = {}) {
+async function writeVelocityMetric(
+  teamId: string,
+  repoId: string | null,
+  value: number,
+  tags: Record<string, string> = {}
+) {
   const point = new Point(MEASUREMENTS.VELOCITY)
-    .tag("team_id", teamId)
-    .tag("repo_id", repoId || "all")
-    .floatField("value", value)
+    .tag('team_id', teamId)
+    .tag('repo_id', repoId || 'all')
+    .floatField('value', value)
     .timestamp(new Date());
 
   Object.entries(tags).forEach(([key, val]) => {
@@ -50,12 +55,17 @@ async function writeVelocityMetric(teamId: string, repoId: string | null, value:
 }
 
 // Helper function to write acceleration metrics
-async function writeAccelerationMetric(teamId: string, value: number, trend: string, confidence: number) {
+async function writeAccelerationMetric(
+  teamId: string,
+  value: number,
+  trend: string,
+  confidence: number
+) {
   const point = new Point(MEASUREMENTS.ACCELERATION)
-    .tag("team_id", teamId)
-    .tag("trend", trend) // 'improving', 'stable', 'declining'
-    .floatField("value", value)
-    .floatField("confidence", confidence)
+    .tag('team_id', teamId)
+    .tag('trend', trend) // 'improving', 'stable', 'declining'
+    .floatField('value', value)
+    .floatField('confidence', confidence)
     .timestamp(new Date());
 
   writeApi.writePoint(point);
@@ -63,12 +73,17 @@ async function writeAccelerationMetric(teamId: string, value: number, trend: str
 }
 
 // Helper function to write bottleneck events
-async function writeBottleneckEvent(teamId: string, stage: string, severity: string, impactDays: number) {
+async function writeBottleneckEvent(
+  teamId: string,
+  stage: string,
+  severity: string,
+  impactDays: number
+) {
   const point = new Point(MEASUREMENTS.BOTTLENECK)
-    .tag("team_id", teamId)
-    .tag("stage", stage) // 'review', 'testing', 'merge', etc.
-    .tag("severity", severity) // 'low', 'medium', 'high'
-    .floatField("impact_days", impactDays)
+    .tag('team_id', teamId)
+    .tag('stage', stage) // 'review', 'testing', 'merge', etc.
+    .tag('severity', severity) // 'low', 'medium', 'high'
+    .floatField('impact_days', impactDays)
     .timestamp(new Date());
 
   writeApi.writePoint(point);
@@ -76,7 +91,10 @@ async function writeBottleneckEvent(teamId: string, stage: string, severity: str
 }
 
 // Query helper for velocity history
-async function queryVelocityHistory(teamId: string, days = 30): Promise<Array<{ time: any; value: number; repo_id: string }>> {
+async function queryVelocityHistory(
+  teamId: string,
+  days = 30
+): Promise<Array<{ time: any; value: number; repo_id: string }>> {
   const fluxQuery = flux`
     from(bucket: "${bucket}")
       |> range(start: -${days}d)
@@ -100,7 +118,10 @@ async function queryVelocityHistory(teamId: string, days = 30): Promise<Array<{ 
 }
 
 // Query helper for acceleration history
-async function queryAccelerationHistory(teamId: string, days = 90): Promise<Array<{ time: any; value: number; confidence: number; trend: string }>> {
+async function queryAccelerationHistory(
+  teamId: string,
+  days = 90
+): Promise<Array<{ time: any; value: number; confidence: number; trend: string }>> {
   const fluxQuery = flux`
     from(bucket: "${bucket}")
       |> range(start: -${days}d)
@@ -131,10 +152,10 @@ async function testConnection(): Promise<boolean> {
     // Try to query the bucket
     const fluxQuery = `from(bucket: "${bucket}") |> range(start: -1m) |> limit(n: 1)`;
     await queryApi.collectRows(fluxQuery);
-    console.log("✅ InfluxDB connected to bucket:", bucket);
+    console.log('✅ InfluxDB connected to bucket:', bucket);
     return true;
   } catch (error) {
-    console.error("❌ InfluxDB connection failed:", (error as Error).message);
+    console.error('❌ InfluxDB connection failed:', (error as Error).message);
     return false;
   }
 }
@@ -146,6 +167,11 @@ async function initializeBucket(): Promise<void> {
     if (orgs && orgs.orgs && orgs.orgs.length > 0) {
       const orgID = orgs.orgs[0]?.id;
 
+      if (!orgID) {
+        console.error(`❌ No organization found with name: ${org}`);
+        return;
+      }
+
       const buckets = await bucketsAPI.getBuckets({ org, name: bucket });
       if (!buckets || !buckets.buckets || buckets.buckets.length === 0) {
         await bucketsAPI.postBuckets({
@@ -154,7 +180,7 @@ async function initializeBucket(): Promise<void> {
             name: bucket,
             retentionRules: [
               {
-                type: "expire",
+                type: 'expire',
                 everySeconds: 90 * 24 * 60 * 60, // 90 days retention
               },
             ],
@@ -164,14 +190,14 @@ async function initializeBucket(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("Error initializing InfluxDB bucket:", error);
+    console.error('Error initializing InfluxDB bucket:', error);
   }
 }
 
 // Graceful shutdown
 async function close(): Promise<void> {
   await writeApi.close();
-  console.log("InfluxDB connection closed");
+  console.log('InfluxDB connection closed');
 }
 
 // Named exports
